@@ -23,3 +23,44 @@ reserva.CadastrarHospedes(hospedes);
 // Exibe a quantidade de hóspedes e o valor da diária
 Console.WriteLine($"Hóspedes: {reserva.ObterQuantidadeHospedes()}");
 Console.WriteLine($"Valor diária: {reserva.CalcularValorDiaria()}");
+
+bool exibirMenu = true;
+
+while (exibirMenu)
+{
+    Console.Clear();
+    Console.WriteLine("Digite uma opção");
+    Console.WriteLine("1 - Cadastrar suite");
+    Console.WriteLine("2 - Listar suites");
+    Console.WriteLine("3 - Cadastrar hospedes");
+    Console.WriteLine("4 - Realizar reserva");
+    Console.WriteLine("5 - Liberar suite");
+
+    switch (Console.ReadLine())
+    {
+        case "1":
+            break;
+
+        case "2":
+            break;
+
+        case "3":
+            break;
+
+        case "4":
+            break;
+
+        case "5":
+            break;
+
+        default:
+            Console.WriteLine("Opção inválida");
+            break;
+    }
+
+    Console.WriteLine("Pressione uma tecla para continuar");
+    Console.ReadLine();
+
+}
+
+Console.WriteLine("Programa finalizado");
