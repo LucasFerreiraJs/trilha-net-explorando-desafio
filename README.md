@@ -19,3 +19,10 @@ O seu programa deverá cálcular corretamente os valores dos métodos da classe 
 
 ## Solução
 O código está pela metade, e você deverá dar continuidade obedecendo as regras descritas acima, para que no final, tenhamos um programa funcional. Procure pela palavra comentada "TODO" no código, em seguida, implemente conforme as regras acima.
+
+
+
+
+sqlite
+conferir nomes das tabelas 
+"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
