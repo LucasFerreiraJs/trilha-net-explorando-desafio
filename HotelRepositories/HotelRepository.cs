@@ -3,16 +3,18 @@ using DesafioProjetoHospedagem.Queries;
 using Microsoft.Data.Sqlite;
 using System.Globalization;
 using System;
+using DesafioProjetoHospedagem.HotelRepositories;
 namespace DesafioProjetoHospedagem.HotelRepositories;
 
 public class HotelRepository
 {
 
-    public HotelRepository(SqliteConnection connection, HotelQueries queries){
+    public HotelRepository(SqliteConnection connection, HotelQueries queries, HotelLogRepository log){
         _connection = connection;
         _queries= queries;
+        _log= log;
     }
-
+    private HotelLogRepository _log;
 
     private SqliteConnection _connection;
     private HotelQueries _queries;
@@ -32,57 +34,76 @@ public class HotelRepository
         command.Parameters.AddWithValue("$dailyValue", suite.DailyValue);
         long id = (long)command.ExecuteScalar();
 
+        _log.RegisterLog(action: "INSERT", $"{id} - {suite.SuiteType} - {suite.Capacity} - {suite.DailyValue}");
         return id > 0;
+
         // suites.Add(proximaKey, suite);
     }
 
-    // public void RemoverSuite(int id)
-    // {
+    public Suite GetSuiteById(int id)
+    {
+        var command = _connection.CreateCommand();
+        command.CommandText = _queries.getSuiteById;
+        command.Parameters.AddWithValue("$id", id);
 
-    //     // ! validar se term reserva
+        using var reader = command.ExecuteReader();
 
-    //     if (id < 0 || id >= suites.Count)
-    //     {
-    //         Console.WriteLine("Suite não encontrada");
-    //         return;
-    //     }
+        if (!reader.Read())
+        {
+            return null;
+        }
 
-    //     suites.Remove(id);
-    // }
+        string type = reader.GetString(1);
+        int capacity = reader.GetInt32(2);
+        int value = reader.GetInt32(3);
+
+        Suite suite = new Suite(id: id, suiteType: type, capacity: capacity, dailyValue: value);
+        _log.RegisterLog(action: "GET", $"{id} - {suite.SuiteType} - {suite.Capacity} - {suite.DailyValue}");
+        return suite;
+
+    }
+    public bool RemoveSuite(int id)
+    {
+        var suite = GetSuiteById(id);
+        if (suite == null)
+        {
+            return false;
+        }
+
+        var command = _connection.CreateCommand();
+        command.CommandText = _queries.deleteSuite;
+        command.Parameters.AddWithValue("$id", id);
+        int rows = command.ExecuteNonQuery();
+        _log.RegisterLog(action: "DELETE", $"{id} - {suite.SuiteType} - {suite.Capacity} - {suite.DailyValue}");
+        return rows > 0;
+    }
 
 
-    public void GetAllSuites()
+    public List<Suite> GetAllSuites()
     {
         var command = _connection.CreateCommand();
         command.CommandText = _queries.getAllSuites;
         var suites = new List<Suite>();
 
         using var reader = command.ExecuteReader();
-            while (reader.Read()){
 
-                int id = reader.GetInt32(0);
-                string type = reader.GetString(1);
-                int capacity = reader.GetInt32(2);
-                int value = reader.GetInt32(3);
-
-                suites.Add(new Suite(id:id, suiteType: type, capacity: capacity, dailyValue: value));
-            }
-
-        if (suites.Count() > 0)
+        if (!reader.Read())
         {
-            foreach ( var  suite in suites)
-            {
-                Console.WriteLine($"Suite id: {suite.Id?.ToString() ??  "(Sem id)"}" );
-                Console.WriteLine($"Tipo: {suite.SuiteType}");
-                Console.WriteLine($"Capacidade: {suite.Capacity}");
-                Console.WriteLine($"Valor: {suite.FormatedDailyValue()}");
-                Console.WriteLine("--------------------------");
-            }
-            return;
+            return null;
         }
 
-        Console.WriteLine("Não há suites cadastradas");
-        return;
+        while (reader.Read())
+        {
+
+            int id = reader.GetInt32(0);
+            string type = reader.GetString(1);
+            int capacity = reader.GetInt32(2);
+            int value = reader.GetInt32(3);
+
+            suites.Add(new Suite(id: id, suiteType: type, capacity: capacity, dailyValue: value));
+        }
+        _log.RegisterLog(action: "GET", $"LISTA DE SUITES");
+        return suites;
     }
 
     // public void ListarSuitesLivres()

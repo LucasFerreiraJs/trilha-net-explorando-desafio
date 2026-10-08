@@ -37,6 +37,7 @@ foreach (string sql in scripts)
     command.ExecuteNonQuery();
 }
 
+string filepath = "Hotel_log.txt";
 
 // Cria os modelos de hóspedes e cadastra na lista de hóspedes
 // List<Pessoa> hospedes = new List<Pessoa>();
@@ -61,7 +62,10 @@ foreach (string sql in scripts)
 
 bool exibirMenu = true;
 
-HotelRepository repository = new HotelRepository(connection: conn, queries: hotelQueries);
+HotelLogRepository logRepository = new HotelLogRepository(path: filepath);
+logRepository.StartFile();
+
+HotelRepository repository = new HotelRepository(connection: conn, queries: hotelQueries, log:logRepository );
 
 HotelService service = new HotelService(repository: repository);
 

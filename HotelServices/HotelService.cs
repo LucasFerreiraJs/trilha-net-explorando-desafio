@@ -85,22 +85,68 @@ public class HotelService
                     Console.WriteLine("Erro ao realizar cadastro da suite");
                 }
 
-            Console.WriteLine();
-            Console.WriteLine("Aperte qualquer tecla para voltar");
-             Console.ReadLine();
+                Console.WriteLine();
+                Console.WriteLine("Aperte qualquer tecla para voltar");
+                Console.ReadLine();
             break;
+
+
 
             case "2":
                  Console.Clear();
-                _repository.GetAllSuites();
+                 var suites = _repository.GetAllSuites();
 
-                 Console.WriteLine();
-                 Console.WriteLine("Aperte qualquer tecla para voltar");
-                 Console.ReadLine();
-            break;
+                if (suites == null || suites.Count == 0)
+                {
+                    Console.WriteLine("Não há suites cadastradas");
+                    return;
+                }
+                foreach ( var  value in suites)
+                {
+                    Console.WriteLine($"Suite id: {value.Id?.ToString() ??  "(Sem id)"}" );
+                    Console.WriteLine($"Tipo: {value.SuiteType}");
+                    Console.WriteLine($"Capacidade: {value.Capacity}");
+                    Console.WriteLine($"Valor: {value.FormatedDailyValue()}");
+                    Console.WriteLine("--------------------------");
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("Aperte qualquer tecla para voltar");
+                Console.ReadLine();
+                break;
+
+            case "3":
+                break;
+
+            case "4":
+                Console.Clear();
+                Console.WriteLine("Digite o id da suite que quer remover:");
+                bool checkIdValue = int.TryParse(Console.ReadLine(), out var id);
+
+                if (!checkIdValue) {
+                    Console.Clear();
+                    Console.WriteLine("Formato do id inválido");
+                    Console.WriteLine("Aperte qualquer tecla para voltar");
+                    Console.ReadLine();
+                    return;
+                }
+                var remove = _repository.RemoveSuite(id:id);
+                if (!remove)
+                {
+                    Console.Clear();
+                    Console.WriteLine("Erro aom deletar suite");
+                    Console.WriteLine("Aperte qualquer tecla para voltar");
+                    Console.ReadLine();
+                    return;
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("Aperte qualquer tecla para voltar");
+                Console.ReadLine();
+                break;
 
             default:
-            break;
+                break;
         }
     }
 
