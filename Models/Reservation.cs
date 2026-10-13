@@ -2,6 +2,7 @@ namespace DesafioProjetoHospedagem.Models
 {
     public class Reservation
     {
+        public int Id { get; set; }
         public List<Guest> Guests { get; set; }
         public Suite Suite { get; set; }
         public int ReservedDays { get; set; }
@@ -11,6 +12,20 @@ namespace DesafioProjetoHospedagem.Models
         public Reservation(int reservedDays)
         {
             ReservedDays = reservedDays;
+        }
+
+        public Reservation( int reservedDays, Suite suite, List<Guest> guests)
+        {
+            ReservedDays = reservedDays;
+            Suite = suite;
+            Guests = guests;
+        }
+        public Reservation(int id, int reservedDays, Suite suite, List<Guest> guests)
+        {
+            Id = id;
+            ReservedDays = reservedDays;
+            Suite = suite;
+            Guests = guests;
         }
 
         public void CadastrarHospedes(List<Guest> guests)
