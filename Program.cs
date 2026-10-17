@@ -4,6 +4,7 @@ using DesafioProjetoHospedagem.Models;
 using Microsoft.Data.Sqlite;
 using DesafioProjetoHospedagem.Queries;
 using DesafioProjetoHospedagem.HotelRepositories;
+using DesafioProjetoHospedagem.Menus;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -18,8 +19,8 @@ using (var pragma = conn.CreateCommand())
     pragma.ExecuteNonQuery();
 
 }
-using var command = conn.CreateCommand();
 
+using var command = conn.CreateCommand();
 
 
 var hotelQueries = new HotelQueries();
@@ -38,6 +39,44 @@ foreach (string sql in scripts)
 }
 
 string filepath = "Hotel_log.txt";
+
+HotelLogRepository logRepository = new HotelLogRepository(path: filepath);
+logRepository.StartFile();
+
+HotelRepository repository = new HotelRepository(connection: conn, queries: hotelQueries, log: logRepository);
+
+HotelService service = new HotelService(repository: repository);
+
+
+// menus
+var guestMenu = new GuestMenu(
+    service: service,
+    logRepository: logRepository,
+    repository: repository
+);
+
+var reservationMenu = new ReservationMenu(
+    service: service,
+    logRepository: logRepository,
+    repository: repository
+);
+
+var suiteMenu = new SuiteMenu(
+    service: service,
+    logRepository: logRepository,
+    repository: repository
+);
+
+var mainMenu = new MainMenu(
+    logRepository: logRepository,
+    repository: repository,
+    guestMenu: guestMenu,
+    reservationMenu: reservationMenu,
+    suiteMenu: suiteMenu
+);
+
+
+mainMenu.Run();
 
 // Cria os modelos de hóspedes e cadastra na lista de hóspedes
 // List<Pessoa> hospedes = new List<Pessoa>();
@@ -59,76 +98,3 @@ string filepath = "Hotel_log.txt";
 // Exibe a quantidade de hóspedes e o valor da diária
 // Console.WriteLine($"Hóspedes: {reserva.ObterQuantidadeHospedes()}");
 // Console.WriteLine($"Valor diária: {reserva.CalcularValorDiaria()}");
-
-bool exibirMenu = true;
-
-HotelLogRepository logRepository = new HotelLogRepository(path: filepath);
-logRepository.StartFile();
-
-HotelRepository repository = new HotelRepository(connection: conn, queries: hotelQueries, log:logRepository );
-
-HotelService service = new HotelService(repository: repository);
-
-menu();
-
-Console.WriteLine("Programa finalizado");
-
-
-void menu()
-{
-    while (exibirMenu)
-{
-    // Console.Clear();
-    // Console.WriteLine("Digite uma opção");
-    // Console.WriteLine("1 - Cadastrar suite");
-    // Console.WriteLine("2 - Listar suites");
-    // Console.WriteLine("3 - Listar suites livres");
-    // Console.WriteLine("4 - Cadastrar hospedes");
-    // Console.WriteLine("5 - Listar hospedes");
-    // Console.WriteLine("6 - Listar hospedes sem reserva");
-    // Console.WriteLine("7 - Remover hospedes");
-    // Console.WriteLine("8 - Realizar reserva");
-    // Console.WriteLine("9 - Listar reservas");
-    // Console.WriteLine("10 - Finalizar reserva");
-
-    Console.Clear();
-    Console.WriteLine("Digite uma opção:");
-    Console.WriteLine("");
-    Console.WriteLine("1 - Menu suite");
-    Console.WriteLine("2 - Menu hospedes");
-    Console.WriteLine("3 - Menu reservas");
-    Console.WriteLine("4 - Finalizar reserva");
-    Console.WriteLine("");
-
-
-    switch (Console.ReadLine())
-    {
-        case "1":
-            service.SuitesMenu();
-
-            break;
-
-        case "2":
-            service.GuestMenu();
-            break;
-
-        case "3":
-            service.ReservationMenu();
-            break;
-
-        case "4":
-            Console.Clear();
-            break;
-
-        default:
-            Console.WriteLine("Opção inválida");
-            break;
-    }
-
-
-    // Console.ReadLine();
-
-}
-
-
-}

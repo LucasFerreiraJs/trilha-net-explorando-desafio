@@ -165,14 +165,14 @@ public class HotelQueries
         INSERT INTO RESERVAS (
             DIAS_RESERVADOS, ID_SUITE
         ) VALUES (
-            $reservedDays, $idSuite
+            $reservedDays, $suiteId
         ) RETURNING ID;
     ";
     public string updateReservation = @"
         UPDATE RESERVAS
             SET
                 DIAS_RESERVADOS = $reservedDays,
-                ID_SUITE = $idSuite
+                ID_SUITE = $suiteId
         WHERE ID = $id;
     ";
     public string deleteReservation = @"

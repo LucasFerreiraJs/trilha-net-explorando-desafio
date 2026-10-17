@@ -215,15 +215,71 @@ public class HotelRepository
 
      public long RegisterReservation(Reservation reservation)
     {
-        using var command = _connection.CreateCommand();
-        command.CommandText = _queries.insertReservation;
-        command.Parameters.AddWithValue("$reservedDays", reservation.ReservedDays);
-        command.Parameters.AddWithValue("$idSuite", reservation.Suite.Id);
-        var id = (long)command.ExecuteScalar();
+
+        if (reservation.Suite?.Id is not int suiteId){
+            return 0;
+
+        }
+
+        if (reservation.Guests is null ||
+            reservation.Guests.Count() == 0 ||
+            reservation.Guests.Any(guest => !guest.Id.HasValue)
+        ){
+
+            return 0;
+        }
+
+        using var transaction = _connection.BeginTransaction();
+        using var reservationCommand = _connection.CreateCommand();
+        reservationCommand.Transaction = transaction;
+        reservationCommand.CommandText = _queries.insertReservation;
+
+        reservationCommand.Parameters.AddWithValue("$reservedDays", reservation.ReservedDays);
+        reservationCommand.Parameters.AddWithValue("$suiteId", reservation.Suite.Id);
+
+        var reservationId = (long)reservationCommand.ExecuteScalar();
+
+        if (reservationId <= 0){
+            transaction.Rollback();
+            return 0;
+        }
 
 
-        // return id > 0 ;
-        return id ;
+        var  guestCommand = _connection.CreateCommand();
+        guestCommand.Transaction = transaction;
+        guestCommand.CommandText = _queries.insertReservationGuests;
+
+        var reservationParameter = guestCommand.Parameters.Add(
+            "$reservaId",
+            SqliteType.Integer
+        );
+        var guestParameter = guestCommand.Parameters.Add(
+            "$pessoaId",
+            SqliteType.Integer
+        );
+
+        reservationParameter.Value = reservationId;
+
+
+        var guestIdList = reservation.Guests
+            .Select(guest => guest.Id.Value)
+            .Distinct();
+
+        foreach (var guestId in guestIdList)
+        {
+
+            guestParameter.Value = guestId;
+            var affectedRows = guestCommand.ExecuteNonQuery();
+
+            if (affectedRows != 1)
+            {
+                transaction.Rollback();
+                break;
+            }
+        }
+
+        transaction.Commit();
+        return reservationId;
     }
 
     public Reservation GetReservationById(int id)
@@ -299,7 +355,7 @@ public class HotelRepository
              );
 
             var reservationGuests = GetGuestsByReservationId(id: reservationId);
-
+            Console.WriteLine($"reservationGuests.Count(): {reservationGuests.Count()}");
             reservations.Add(new Reservation(
                 id: reservationId,
                 reservedDays:reservedDays,
@@ -417,8 +473,9 @@ public class HotelRepository
 
         var guests = new List<Guest>();
 
+        System.Console.WriteLine("cai cai");
         while (reader.Read()){
-
+            System.Console.WriteLine("cai nesse while?");
             int reservationGuestById = reader.GetInt32(0);
             int guestId = reader.GetInt32(1);
             int reservationId = reader.GetInt32(2);
