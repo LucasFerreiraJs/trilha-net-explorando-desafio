@@ -1,4 +1,4 @@
-    using DesafioProjetoHospedagem.Models;
+using DesafioProjetoHospedagem.Models;
 using DesafioProjetoHospedagem.Queries;
 using Microsoft.Data.Sqlite;
 using System.Collections.Generic;
@@ -52,13 +52,20 @@ public class HotelRepository
         string type = reader.GetString(1);
         int capacity = reader.GetInt32(2);
         int value = reader.GetInt32(3);
+        string status = reader.GetString(4);
 
-        Suite suite = new Suite(id: id, suiteType: type, capacity: capacity, dailyValue: value);
+        Suite suite = new Suite(
+            id: id,
+            suiteType: type,
+            capacity: capacity,
+            dailyValue: value,
+            status: status
+        );
         _log.RegisterLog(action: "GET", $"{id} - {suite.SuiteType} - {suite.Capacity} - {suite.DailyValue}");
         return suite;
 
     }
-    public bool RemoveSuite(int id)
+    public bool DeactivateSuite(int id)
     {
         var suite = GetSuiteById(id);
         if (suite == null)
@@ -67,11 +74,20 @@ public class HotelRepository
         }
 
         using var command = _connection.CreateCommand();
-        command.CommandText = _queries.deleteSuite;
+        command.CommandText = _queries.deactivateSuite;
         command.Parameters.AddWithValue("$id", id);
         int rows = command.ExecuteNonQuery();
-        _log.RegisterLog(action: "DELETE", $"{id} - {suite.SuiteType} - {suite.Capacity} - {suite.DailyValue}");
-        return rows > 0;
+        bool deactivated = rows == 1;
+
+        if (deactivated)
+        {
+            _log.RegisterLog(
+                action: "DEACTIVATE:SUITE",
+                message: $"ID={id}; Tipo={suite.SuiteType}"
+            );
+        }
+
+        return deactivated;
     }
 
 
@@ -90,8 +106,15 @@ public class HotelRepository
             string type = reader.GetString(1);
             int capacity = reader.GetInt32(2);
             int value = reader.GetInt32(3);
+            string status = reader.GetString(4);
 
-            suites.Add(new Suite(id: suiteId, suiteType: type, capacity: capacity, dailyValue: value));
+            suites.Add(new Suite(
+                id: suiteId,
+                suiteType: type,
+                capacity: capacity,
+                dailyValue: value,
+                status: status
+            ));
         }
         _log.RegisterLog(action: "GET", $"LISTA DE SUITES");
         return suites;
@@ -113,8 +136,15 @@ public class HotelRepository
             string type = reader.GetString(1);
             int capacity = reader.GetInt32(2);
             int value = reader.GetInt32(3);
+            string status = reader.GetString(4);
 
-            suites.Add(new Suite(id: suiteId, suiteType: type, capacity: capacity, dailyValue: value));
+            suites.Add(new Suite(
+                id: suiteId,
+                suiteType: type,
+                capacity: capacity,
+                dailyValue: value,
+                status: status
+            ));
         }
         _log.RegisterLog(action: "GET", $"LISTA DE SUITES");
         return suites;
@@ -134,6 +164,15 @@ public class HotelRepository
 
         var id = (long)command.ExecuteScalar();
 
+        if (id > 0)
+        {
+            _log.RegisterLog(
+                action: "INSERT:GUEST",
+                message: $"ID={id}; Nome={guest.FullName}"
+                );
+
+        }
+
         return id > 0;
     }
 
@@ -145,14 +184,26 @@ public class HotelRepository
 
         using var reader = command.ExecuteReader();
 
-        while (reader.Read()){
+        while (reader.Read())
+        {
 
             int guestId = reader.GetInt32(0);
             string name = reader.GetString(1);
-            string lastName = reader.IsDBNull(2) ?  null : reader.GetString(2);
-            guests.Add(new Guest(id: guestId, name: name, lastName: lastName));
+            string lastName = reader.IsDBNull(2) ? null : reader.GetString(2);
+            string status = reader.GetString(3);
+            guests.Add(new Guest(
+                id: guestId,
+                name: name,
+                lastName: lastName,
+                status: status
+            ));
         }
 
+
+        _log.RegisterLog(
+            action: "GET:GUESTS",
+            message: $"Quantidade={guests.Count}"
+        );
         return guests;
     }
 
@@ -164,13 +215,25 @@ public class HotelRepository
 
         using var reader = command.ExecuteReader();
 
-        while (reader.Read()){
+        while (reader.Read())
+        {
 
             int guestId = reader.GetInt32(0);
             string name = reader.GetString(1);
-            string lastName = reader.IsDBNull(2) ?  null : reader.GetString(2);
-            guests.Add(new Guest(id: guestId, name: name, lastName: lastName));
+            string lastName = reader.IsDBNull(2) ? null : reader.GetString(2);
+            string status = reader.GetString(3);
+            guests.Add(new Guest(
+                id: guestId,
+                name: name,
+                lastName: lastName,
+                status: status
+            ));
         }
+
+        _log.RegisterLog(
+            action: "GET:AVAILABLE_GUESTS",
+            message: $"Quantidade={guests.Count}"
+        );
 
         return guests;
     }
@@ -191,32 +254,57 @@ public class HotelRepository
         string lastName = reader.IsDBNull(2)
             ? null
             : reader.GetString(2);
+        string status = reader.GetString(3);
 
-        return new Guest(id: guestId, name: name, lastName: lastName);
+        _log.RegisterLog(
+            action: "GET:GUEST",
+            message: $"ID={guestId}"
+        );
+
+        return new Guest(
+            id: guestId,
+            name: name,
+            lastName: lastName,
+            status: status
+        );
     }
-    public bool RemoveGuestById(int id)
+    public bool DeactivateGuest(int id)
     {
         var guest = GetGuestById(id);
 
-        if (guest == null){
+        if (guest == null)
+        {
             return false;
 
         }
         using var command = _connection.CreateCommand();
-        command.CommandText = _queries.deleteGuest;
+        command.CommandText = _queries.deactivateGuest;
         command.Parameters.AddWithValue("$id", id);
 
         int rows = command.ExecuteNonQuery();
-        return rows > 0;
+        var deactivated = rows == 1;
+
+        if (deactivated)
+        {
+            _log.RegisterLog(
+                action: "DEACTIVATE:GUEST",
+                message: $"ID={id}; Nome={guest.FullName}"
+            );
+        }
+
+
+
+        return deactivated;
     }
 
 
 
 
-     public long RegisterReservation(Reservation reservation)
+    public long RegisterReservation(Reservation reservation)
     {
 
-        if (reservation.Suite?.Id is not int suiteId){
+        if (reservation.Suite?.Id is not int suiteId)
+        {
             return 0;
 
         }
@@ -224,7 +312,8 @@ public class HotelRepository
         if (reservation.Guests is null ||
             reservation.Guests.Count() == 0 ||
             reservation.Guests.Any(guest => !guest.Id.HasValue)
-        ){
+        )
+        {
 
             return 0;
         }
@@ -239,13 +328,14 @@ public class HotelRepository
 
         var reservationId = (long)reservationCommand.ExecuteScalar();
 
-        if (reservationId <= 0){
+        if (reservationId <= 0)
+        {
             transaction.Rollback();
             return 0;
         }
 
 
-        var  guestCommand = _connection.CreateCommand();
+        var guestCommand = _connection.CreateCommand();
         guestCommand.Transaction = transaction;
         guestCommand.CommandText = _queries.insertReservationGuests;
 
@@ -274,11 +364,27 @@ public class HotelRepository
             if (affectedRows != 1)
             {
                 transaction.Rollback();
+                _log.RegisterLog(
+                    action: "ERROR:RESERVATION",
+                    message:
+                        $"Falha ao associar hóspede; " +
+                        $"ReservationId={reservationId}; GuestId={guestId}"
+                );
                 break;
             }
         }
 
         transaction.Commit();
+
+        _log.RegisterLog(
+            action: "INSERT:RESERVATION",
+            message:
+                $"ID={reservationId}; " +
+                $"SuiteId={suiteId}; " +
+                $"Hospedes={reservation.Guests.Count}; " +
+                $"Dias={reservation.ReservedDays}"
+        );
+
         return reservationId;
     }
 
@@ -293,30 +399,47 @@ public class HotelRepository
             return null;
         }
 
-        // ID, DIAS_RESERVADOS, ID_RESERVA
         int reservationId = reader.GetInt32(0);
         int reservedDays = reader.GetInt32(1);
-        // int idSuite = reader.GetInt32(2);
-
         int suiteId = reader.GetInt32(3);
         string type = reader.GetString(4);
         int capacity = reader.GetInt32(5);
         int value = reader.GetInt32(6);
+        string status = reader.GetString(7);
+        DateTime openingDate = DateTime.Parse(
+            reader.GetString(8),
+            CultureInfo.InvariantCulture
+        );
+        DateTime? closingDate = reader.IsDBNull(9)
+            ? null
+            : DateTime.Parse(reader.GetString(9), CultureInfo.InvariantCulture);
+        string suiteStatus = reader.GetString(10);
 
         Suite suite = new Suite(
             id: suiteId,
             suiteType: type,
             capacity: capacity,
-            dailyValue: value
+            dailyValue: value,
+            status: suiteStatus
         );
 
-        var ReservationGuest = GetGuestsByReservationId(id: reservationId);
+        reader.Close();
+
+        var reservationGuests = GetGuestsByReservationId(id: reservationId);
+
+        _log.RegisterLog(
+            action: "GET:RESERVATION",
+            message: $"ID={reservationId}"
+        );
 
         return new Reservation(
             id: reservationId,
             reservedDays: reservedDays,
             suite: suite,
-            guests: ReservationGuest
+            guests: reservationGuests,
+            status: status,
+            openingDate: openingDate,
+            closingDate: closingDate
         );
     }
 
@@ -326,52 +449,178 @@ public class HotelRepository
         command.CommandText = _queries.deleteReservation;
         command.Parameters.AddWithValue("$id", id);
         var rows = command.ExecuteNonQuery();
-        return rows > 0;
+
+
+        bool removed = rows > 0;
+
+        if (removed)
+        {
+            _log.RegisterLog(
+                action: "DELETE:RESERVATION",
+                message: $"ID={id}"
+            );
+        }
+
+        return removed;
     }
 
     public List<Reservation> GetAllReservation()
     {
+        return GetReservations();
+    }
+
+    public List<Reservation> GetOpenReservations()
+    {
+        return GetReservationsByStatus(Reservation.OpenStatus);
+    }
+
+    public List<Reservation> GetClosedReservations()
+    {
+        return GetReservationsByStatus(Reservation.ClosedStatus);
+    }
+
+    public List<Reservation> GetCanceledReservations()
+    {
+        return GetReservationsByStatus(Reservation.CanceledStatus);
+    }
+
+    public List<Reservation> GetReservationsByStatus(string status)
+    {
+        bool validStatus = status == Reservation.OpenStatus
+            || status == Reservation.ClosedStatus
+            || status == Reservation.CanceledStatus;
+
+        if (!validStatus)
+        {
+            throw new ArgumentException("Status de reserva inválido.", nameof(status));
+        }
+
+        return GetReservations(status);
+    }
+
+    private List<Reservation> GetReservations(string status = null)
+    {
+        bool filterByStatus = status is not null;
+
         using var command = _connection.CreateCommand();
-        command.CommandText = _queries.getAllReservationsWithSuite;
+        command.CommandText = filterByStatus
+            ? _queries.getReservationsWithSuiteByStatus
+            : _queries.getAllReservationsWithSuite;
+
+        if (filterByStatus)
+        {
+            command.Parameters.AddWithValue("$status", status);
+        }
+
         using var reader = command.ExecuteReader();
 
-        List<Reservation> reservations = new List<Reservation>();
+        var reservationRows = new List<(
+            int Id,
+            int ReservedDays,
+            Suite Suite,
+            string Status,
+            DateTime OpeningDate,
+            DateTime? ClosingDate
+        )>();
 
-        while (reader.Read()){
-
+        while (reader.Read())
+        {
             int reservationId = reader.GetInt32(0);
             int reservedDays = reader.GetInt32(1);
-
             int suiteId = reader.GetInt32(3);
             string type = reader.GetString(4);
             int capacity = reader.GetInt32(5);
             int value = reader.GetInt32(6);
+            string reservationStatus = reader.GetString(7);
+            DateTime openingDate = DateTime.Parse(
+                reader.GetString(8),
+                CultureInfo.InvariantCulture
+            );
+            DateTime? closingDate = reader.IsDBNull(9)
+                ? null
+                : DateTime.Parse(reader.GetString(9), CultureInfo.InvariantCulture);
+            string suiteStatus = reader.GetString(10);
 
             Suite suite = new Suite(
                 id: suiteId,
                 suiteType: type,
                 capacity: capacity,
-                dailyValue: value
+                dailyValue: value,
+                status: suiteStatus
              );
 
-            var reservationGuests = GetGuestsByReservationId(id: reservationId);
-            Console.WriteLine($"reservationGuests.Count(): {reservationGuests.Count()}");
-            reservations.Add(new Reservation(
-                id: reservationId,
-                reservedDays:reservedDays,
-                suite: suite,
-                guests: reservationGuests
-                )
-            );
+            reservationRows.Add((
+                reservationId,
+                reservedDays,
+                suite,
+                reservationStatus,
+                openingDate,
+                closingDate
+            ));
         }
+
+        reader.Close();
+
+        var reservations = reservationRows.Select(item => new Reservation(
+            id: item.Id,
+            reservedDays: item.ReservedDays,
+            suite: item.Suite,
+            guests: GetGuestsByReservationId(item.Id),
+            status: item.Status,
+            openingDate: item.OpeningDate,
+            closingDate: item.ClosingDate
+        )).ToList();
+
+        _log.RegisterLog(
+            action: "GET:RESERVATIONS",
+            message: $"Status={status ?? "TODOS"}; Quantidade={reservations.Count}"
+        );
 
         return reservations;
     }
 
-    public bool RegisterReservationGuest(List<int> guestIds, int  reservationId){
+    public bool UpdateReservationStatus(int id, string status)
+    {
+        if (status != Reservation.ClosedStatus
+            && status != Reservation.CanceledStatus)
+        {
+            return false;
+        }
+
+        using var command = _connection.CreateCommand();
+        command.CommandText = _queries.updateReservationStatus;
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$status", status);
+
+        bool updated = command.ExecuteNonQuery() == 1;
+
+        if (updated)
+        {
+            _log.RegisterLog(
+                action: "UPDATE:RESERVATION_STATUS",
+                message: $"ID={id}; Status={status}"
+            );
+        }
+
+        return updated;
+    }
+
+    public bool CloseReservation(int id)
+    {
+        return UpdateReservationStatus(id, Reservation.ClosedStatus);
+    }
+
+    public bool CancelReservation(int id)
+    {
+        return UpdateReservationStatus(id, Reservation.CanceledStatus);
+    }
+
+    public bool RegisterReservationGuest(List<int> guestIds, int reservationId)
+    {
 
         var ids = guestIds.Distinct().ToList();
-        if (ids.Count() == 0){
+        if (ids.Count() == 0)
+        {
             return false;
         }
 
@@ -394,7 +643,8 @@ public class HotelRepository
 
         reservationParameter.Value = reservationId;
 
-        foreach (int id in ids){
+        foreach (int id in ids)
+        {
             // command.Parameters.AddWithValue("pessoaId", id);
             // command.Parameters.AddWithValue("reservaId", reservationId);
 
@@ -402,14 +652,24 @@ public class HotelRepository
             guestParameter.Value = id;
             var affectedRows = command.ExecuteNonQuery();
 
-            if (affectedRows != 1){
+            if (affectedRows != 1)
+            {
                 return false;
             }
         }
         transaction.Commit();
+
+        _log.RegisterLog(
+            action: "INSERT:RESERVATION_GUESTS",
+            message:
+                $"ReservationId={reservationId}; " +
+                $"Quantidade={ids.Count}"
+        );
+
         return true;
     }
-    public ReservationGuest ReservationGuestById(int id){
+    public ReservationGuest ReservationGuestById(int id)
+    {
         using var command = _connection.CreateCommand();
         command.CommandText = _queries.getReservationGuestsById;
         command.Parameters.AddWithValue("$id", id);
@@ -426,7 +686,8 @@ public class HotelRepository
 
         return new ReservationGuest(id: reservationGuestById, guestId: guestId, reservationId: reservationId);
     }
-    public ReservationGuest GetReservationGuestByGuestId(int id){
+    public ReservationGuest GetReservationGuestByGuestId(int id)
+    {
         using var command = _connection.CreateCommand();
         command.CommandText = _queries.getReservationGuestsByGuestId;
         command.Parameters.AddWithValue("$pessoaId", id);
@@ -444,14 +705,16 @@ public class HotelRepository
 
     }
 
-    public List<ReservationGuest> GetReservationGuestByReservationId(int id){
+    public List<ReservationGuest> GetReservationGuestByReservationId(int id)
+    {
         using var command = _connection.CreateCommand();
         command.CommandText = _queries.getReservationGuestsByReservationId;
         command.Parameters.AddWithValue("$reservaId", id);
         using var reader = command.ExecuteReader();
         List<ReservationGuest> reservationGuests = new List<ReservationGuest>();
 
-        while (reader.Read()){
+        while (reader.Read())
+        {
 
             int reservationGuestById = reader.GetInt32(0);
             int guestId = reader.GetInt32(1);
@@ -465,7 +728,8 @@ public class HotelRepository
     }
 
 
-    public List<Guest> GetGuestsByReservationId(int id){
+    public List<Guest> GetGuestsByReservationId(int id)
+    {
         using var command = _connection.CreateCommand();
         command.CommandText = _queries.getReservationGuestsFullByReservationId;
         command.Parameters.AddWithValue("$reservaId", id);
@@ -473,24 +737,27 @@ public class HotelRepository
 
         var guests = new List<Guest>();
 
-        System.Console.WriteLine("cai cai");
-        while (reader.Read()){
-            System.Console.WriteLine("cai nesse while?");
+        while (reader.Read())
+        {
             int reservationGuestById = reader.GetInt32(0);
             int guestId = reader.GetInt32(1);
             int reservationId = reader.GetInt32(2);
 
             string guestName = reader.GetString(4);
-            string guestLastName = reader.GetString(5);
+            string guestLastName = reader.IsDBNull(5)
+            ? null
+            : reader.GetString(5);
 
 
             int reservedDays = reader.GetInt32(7);
             int suiteId = reader.GetInt32(8);
+            string guestStatus = reader.GetString(9);
 
             guests.Add(new Guest(
                 id: guestId,
                 name: guestName,
-                lastName: guestLastName
+                lastName: guestLastName,
+                status: guestStatus
             ));
         }
 
@@ -498,13 +765,15 @@ public class HotelRepository
     }
 
 
-    public List<ReservationGuest> GetAllReservationGuest(){
-      using var command = _connection.CreateCommand();
+    public List<ReservationGuest> GetAllReservationGuest()
+    {
+        using var command = _connection.CreateCommand();
         command.CommandText = _queries.getAllReservationGuests;
         using var reader = command.ExecuteReader();
         List<ReservationGuest> reservationGuests = new List<ReservationGuest>();
 
-        while (reader.Read()){
+        while (reader.Read())
+        {
 
             int reservationGuestById = reader.GetInt32(0);
             int guestId = reader.GetInt32(1);
@@ -517,12 +786,44 @@ public class HotelRepository
         return reservationGuests;
     }
 
-    public bool RemoveReservationGuestById(int id){
+    public bool RemoveReservationGuestById(int id)
+    {
         using var command = _connection.CreateCommand();
         command.CommandText = _queries.deleteReservationGuests;
         command.Parameters.AddWithValue("$id", id);
         var rows = command.ExecuteNonQuery();
-        return rows > 0;
+
+        bool removed = rows > 0;
+
+        if (removed)
+        {
+            _log.RegisterLog(
+                action: "DELETE:RESERVATION_GUEST",
+                message: $"AssociationId={id}"
+            );
+        }
+
+        return removed;
     }
 
+
+
+    public bool RemoveReservationGuestByReservationId(int id)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText = _queries.deleteReservationGuestsByReservationId;
+        command.Parameters.AddWithValue("$reservaId", id);
+        var rows = command.ExecuteNonQuery();
+        bool removed = rows > 0;
+
+        if (removed)
+        {
+            _log.RegisterLog(
+                action: "DELETE:RESERVATION_GUESTS",
+                message: $"ReservationId={id}; Quantidade={rows}"
+            );
+        }
+
+        return removed;
+    }
 }

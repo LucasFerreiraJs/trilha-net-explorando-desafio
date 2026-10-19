@@ -1,5 +1,4 @@
 using DesafioProjetoHospedagem.HotelRepositories;
-using DesafioProjetoHospedagem.HotelServices;
 using DesafioProjetoHospedagem.ConsoleHelpers;
 using DesafioProjetoHospedagem.Models;
 using System.Collections.Generic;
@@ -8,25 +7,25 @@ namespace DesafioProjetoHospedagem.Menus;
 
 public class SuiteMenu
 {
-    private readonly HotelService _service;
+
 
     private readonly HotelLogRepository _logRepository;
     private readonly HotelRepository _repository;
-    public SuiteMenu(HotelService service, HotelLogRepository logRepository, HotelRepository repository)
+    public SuiteMenu( HotelLogRepository logRepository, HotelRepository repository)
     {
-        _service = service;
         _logRepository = logRepository;
         _repository = repository;
     }
     public void ShowOptions()
     {
         Console.Clear();
+        Console.WriteLine("MENU SUITE");
         Console.WriteLine("Digite uma opção:");
         Console.WriteLine("");
         Console.WriteLine("1 - Cadastrar suite");
         Console.WriteLine("2 - Listar suites");
         Console.WriteLine("3 - Listar suites sem reserva");
-        Console.WriteLine("4 - Deletar suite cadastrada");
+        Console.WriteLine("4 - Desativar suite cadastrada");
         Console.WriteLine("5 - Voltar");
         Console.WriteLine("");
 
@@ -40,6 +39,7 @@ public class SuiteMenu
         {
             case "1":
                 {
+                    Console.Clear();
                     Console.WriteLine("Digite tipo da suite:");
                     string suiteTypeValue = Console.ReadLine();
 
@@ -176,7 +176,7 @@ public class SuiteMenu
                     int suiteId = 0;
                     if (!checkIdValue)
                     {
-                        Console.WriteLine("Digite o id da suite que quer remover:");
+                        Console.WriteLine("Digite o id da suite que quer desativar:");
                         checkIdValue = int.TryParse(Console.ReadLine(), out var id);
                         if (checkIdValue)
                         {
@@ -186,42 +186,20 @@ public class SuiteMenu
 
                     if (suiteId == 0)
                     {
-                        Console.WriteLine("Erro ao deletar suite");
+                        Console.WriteLine("Id da suite inválido");
                         ConsolePause.Wait();
                         break;
                     }
-
-
-
-                    var reservationList = _repository.GetAllReservation();
-
-                    // checkIfSuiteIsReserved
-                    if (reservationList.Any(item => item.Suite.Id == suiteId))
-                    {
-
-                        Console.WriteLine("Essa suite está reservada, finalize a reserva para poder excluir");
-                        ConsolePause.Wait();
-                        break;
-                    }
-
-
-                    var remove = _repository.RemoveSuite(id: suiteId);
-                    if (!remove)
+                    var deactivated = _repository.DeactivateSuite(id: suiteId);
+                    if (!deactivated)
                     {
                         Console.Clear();
-                        Console.WriteLine("Erro ao deletar suite");
+                        Console.WriteLine("Suite não encontrada ou já está desativada");
                         ConsolePause.Wait();
                         return;
                     }
-                    if (!remove)
-                    {
-                        Console.WriteLine("Erro ao deletar suite");
-                        ConsolePause.Wait();
-                        break;
 
-                    }
-
-                    Console.WriteLine("Suite deletada com sucesso");
+                    Console.WriteLine("Suite desativada com sucesso");
                     ConsolePause.Wait();
                     break;
 

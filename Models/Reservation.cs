@@ -1,11 +1,19 @@
+using System.Globalization;
 namespace DesafioProjetoHospedagem.Models
 {
     public class Reservation
     {
+        public const string OpenStatus = "AB";
+        public const string ClosedStatus = "FE";
+        public const string CanceledStatus = "CA";
+
         public int Id { get; set; }
         public List<Guest> Guests { get; set; }
         public Suite Suite { get; set; }
         public int ReservedDays { get; set; }
+        public string Status { get; set; }
+        public DateTime OpeningDate { get; set; }
+        public DateTime? ClosingDate { get; set; }
 
         public Reservation() { }
 
@@ -20,6 +28,11 @@ namespace DesafioProjetoHospedagem.Models
             Suite = suite;
             Guests = guests;
         }
+        public Reservation( int reservedDays, Suite suite)
+        {
+            ReservedDays = reservedDays;
+            Suite = suite;
+        }
         public Reservation(int id, int reservedDays, Suite suite, List<Guest> guests)
         {
             Id = id;
@@ -28,48 +41,87 @@ namespace DesafioProjetoHospedagem.Models
             Guests = guests;
         }
 
-        public void CadastrarHospedes(List<Guest> guests)
+        public Reservation(
+            int id,
+            int reservedDays,
+            Suite suite,
+            List<Guest> guests,
+            string status,
+            DateTime openingDate,
+            DateTime? closingDate)
         {
-            // TODO: Verificar se a capacidade é maior ou igual ao número de hóspedes sendo recebido
-            // *IMPLEMENTE AQUI*
-            if (true)
-            {
-                Guests = guests;
-            }
-            else
-            {
-                // TODO: Retornar uma exception caso a capacidade seja menor que o número de hóspedes recebido
-                // *IMPLEMENTE AQUI*
-            }
+            Id = id;
+            ReservedDays = reservedDays;
+            Suite = suite;
+            Guests = guests;
+            Status = status;
+            OpeningDate = openingDate;
+            ClosingDate = closingDate;
         }
 
-        public void CadastrarSuite(Suite suite)
+        public void RegisterGuest(List<Guest> guests)
+        {
+            if (guests.Count == 0)
+            {
+                throw new ArgumentException(
+                    "Selecione pelo menos um hóspede."
+                );
+            }
+
+            if (guests.Count > Suite.Capacity)
+            {
+                throw new ArgumentException(
+                    "Quantidade de hóspedes maior que a capacidade da suíte."
+                );
+            }
+
+            Guests = guests;
+
+            // if (Suite != null && guests.Count <= Suite.Capacity )
+            // {
+            //     Guests = guests;
+            // }
+            // else
+            // {
+            //     // TODO: Retornar uma exception caso a capacidade seja menor que o número de hóspedes recebido
+            //     // *IMPLEMENTE AQUI*
+            //     throw new Exception("Quantidade de hospedes maior que capacidade da suite");
+            // }
+        }
+
+        public void RegisterSuite(Suite suite)
         {
             Suite = suite;
         }
 
-        public int ObterQuantidadeHospedes()
+        public int GetGuestQuantity()
         {
-            // TODO: Retorna a quantidade de hóspedes (propriedade Hospedes)
-            // *IMPLEMENTE AQUI*
-            return 0;
+            return Guests.Count;
         }
 
-        public decimal CalcularValorDiaria()
+        public decimal CalcDailyValue()
         {
-            // TODO: Retorna o valor da diária
-            // Cálculo: DiasReservados X Suite.ValorDiaria
-            // *IMPLEMENTE AQUI*
-            decimal valor = 0;
 
-            // Regra: Caso os dias reservados forem maior ou igual a 10, conceder um desconto de 10%
-            // *IMPLEMENTE AQUI*
-            if (true)
+            decimal valor = ReservedDays * Suite.DailyValue;
+
+
+            if (ReservedDays >= 10)
             {
-                valor = 0;
+                valor *= 0.90m;
             }
 
             return valor;
+        }
+
+        public decimal DailyValueToDecimal()
+        {
+
+            return CalcDailyValue() / 100m;
+        }
+        public string FormatedDailyValue()
+        {
+            return DailyValueToDecimal().ToString("0.00", CultureInfo.InvariantCulture);
+
         }
     }
 }

@@ -1,4 +1,3 @@
-using DesafioProjetoHospedagem.HotelServices;
 using DesafioProjetoHospedagem.Models;
 using DesafioProjetoHospedagem.HotelRepositories;
 using DesafioProjetoHospedagem.ConsoleHelpers;
@@ -7,12 +6,12 @@ namespace DesafioProjetoHospedagem.Menus;
 public class ReservationMenu
 {
 
-    private readonly HotelService _service;
+
     private readonly HotelLogRepository _logRepository;
     private readonly HotelRepository _repository;
-    public ReservationMenu(HotelService service, HotelLogRepository logRepository, HotelRepository repository)
+    public ReservationMenu( HotelLogRepository logRepository, HotelRepository repository)
     {
-        _service = service;
+
         _logRepository = logRepository;
         _repository = repository;
     }
@@ -20,13 +19,16 @@ public class ReservationMenu
     public void ShowOptions()
     {
         Console.Clear();
+        Console.WriteLine("MENU RESERVAS");
         Console.WriteLine("Digite uma opção:");
         Console.WriteLine("");
         Console.WriteLine("1 - Cadastrar reserva");
-        Console.WriteLine("2 - Listar reserva");
+        Console.WriteLine("2 - Listar reservas abertas");
         Console.WriteLine("3 - Finalizar reserva");
         Console.WriteLine("4 - Cancelar reserva");
-        Console.WriteLine("5 - Voltar");
+        Console.WriteLine("5 - Histórico de reservas fechadas");
+        Console.WriteLine("6 - Histórico de reservas canceladas");
+        Console.WriteLine("7 - Voltar");
         Console.WriteLine("");
 
     }
@@ -39,6 +41,7 @@ public class ReservationMenu
         {
             case "1":
                 {
+                    Console.Clear();
                     var suites = _repository.GetAllSuitesAvailable();
 
                     if (!suites.Any())
@@ -87,8 +90,9 @@ public class ReservationMenu
                         break;
                     }
 
-                    var suiteSelected = suites.Where(suite => suite.Id == suiteId)
-                    .ToList()[0];
+                    // var suiteSelected = suites.Where(suite => suite.Id == suiteId)
+                    // .ToList()[0];
+                    var suiteSelected = suites.First(suite => suite.Id == suiteId);
 
                     var selectedIds = new HashSet<int>();
                     string search = "";
@@ -172,7 +176,6 @@ public class ReservationMenu
                             || key.Key == ConsoleKey.NumPad1) && visibleGuests.Count() > 0
                         )
                         {
-                            Console.WriteLine("selected press");
                             Guest focusedGuest = visibleGuests[focusedIndex];
 
                             if (focusedGuest.Id.HasValue)
@@ -200,7 +203,6 @@ public class ReservationMenu
 
                         if (key.Key == ConsoleKey.Enter)
                         {
-                            Console.WriteLine("ENTERRRRR");
                             checkForm = true;
                             break;
                         }
@@ -213,32 +215,43 @@ public class ReservationMenu
                     {
                         Console.WriteLine("Digite quantidade de dias: ");
                         checkReservedDaysValue = int.TryParse(Console.ReadLine(), out var qtdDays);
-                        if (checkReservedDaysValue)
+
+                        if (checkReservedDaysValue && qtdDays > 0)
                         {
                             reservedDays = qtdDays;
+                            break;
                         }
+
+                        Console.WriteLine("Digite uma quantidade maior que zero.");
                     }
-
-                    if (reservedDays <= 0)
-                    {
-                        Console.WriteLine("Quantidade de dias reservados inválidos");
-                        ConsolePause.Wait();
-                        break;
-
-                    }
-
 
                     var selectedGuests = guests.Where(item => selectedIds.Contains(item.Id.Value)).ToList();
 
                     var reservation = new Reservation(
-                        suite: suiteSelected,
-                        guests: selectedGuests,
+                        // suite: suiteSelected,
+                        // guests: selectedGuests,
                         reservedDays: reservedDays);
+
+                    try
+                    {
+
+                        reservation.RegisterSuite(suite: suiteSelected);
+                        reservation.RegisterGuest(guests: selectedGuests);
+
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        ConsolePause.Wait();
+                        break;
+                    }
+
 
                     var registerReservation = _repository.RegisterReservation(reservation: reservation);
 
 
-                    if (registerReservation <= 0){
+                    if (registerReservation <= 0)
+                    {
 
                         Console.WriteLine("Erro ao salvar reserva");
                         ConsolePause.Wait();
@@ -253,38 +266,22 @@ public class ReservationMenu
                 }
             case "2":
                 {
-                    var reservations = _repository.GetAllReservation();
-
-                    if (!reservations.Any())
-                    {
-                        Console.WriteLine("Não há reservas cadastradas");
-                        ConsolePause.Wait();
-                        break;
-                    }
-
-                    Console.WriteLine();
-                    Console.WriteLine();
-                    foreach (var item in reservations)
-                    {
-                        Console.WriteLine($"Reserva id: {item.Id.ToString() ?? "(Sem id)"}");
-                        Console.WriteLine($"Tipo suite: {item.Suite.SuiteType}");
-                        Console.WriteLine($"Capacidade: {item.Suite.Capacity}");
-                        Console.WriteLine($"Quantidade hospedes: {item.Guests.Count()}");
-                        Console.WriteLine($"Dias reservados: {item.ReservedDays}");
-                        Console.WriteLine($"Valor diária: {item.Suite.FormatedDailyValue()}");
-                        Console.WriteLine("--------------------------");
-                    }
-
-                    ConsolePause.Wait();
+                    ShowReservationList(
+                        _repository.GetOpenReservations(),
+                        "RESERVAS ABERTAS",
+                        "Não há reservas abertas."
+                    );
                     break;
                 }
             case "3":
                 {
+                    Console.Clear();
                     var checkId = false;
                     int reservationId = 0;
 
                     if (!checkId)
                     {
+                        Console.WriteLine("Digite o id da reserva:");
                         checkId = int.TryParse(Console.ReadLine(), out int id);
                         if (checkId)
                         {
@@ -298,20 +295,35 @@ public class ReservationMenu
                         ConsolePause.Wait();
                         break;
                     }
+
                     var reservation = _repository.GetReservationById(id: reservationId);
-                    if (reservation == null){
+                    if (reservation == null)
+                    {
 
                         Console.WriteLine("Reserva não encontrada");
                         ConsolePause.Wait();
                         break;
                     }
 
+
+                    var checkCloseReservation = _repository.CloseReservation(id: reservationId);
+
+                    if (!checkCloseReservation)
+                    {
+                        Console.WriteLine("Reserva não encontrada ou não está aberta.");
+                        ConsolePause.Wait();
+                        break;
+                    }
+
+                    Console.WriteLine("Reserva finalizada com sucesso.");
                     Console.WriteLine($"Reserva id: {reservation.Id.ToString() ?? "(Sem id)"}");
                     Console.WriteLine($"Tipo suite: {reservation.Suite.SuiteType}");
                     Console.WriteLine($"Capacidade: {reservation.Suite.Capacity}");
-                    Console.WriteLine($"Quantidade hospedes: {reservation.Guests.Count()}");
+                    Console.WriteLine($"Quantidade hospedes: {reservation.Guests.Count}");
                     Console.WriteLine($"Dias reservados: {reservation.ReservedDays}");
+                    Console.WriteLine($"Total: R${reservation.FormatedDailyValue()}");
                     Console.WriteLine("--------------------------");
+
 
 
                     ConsolePause.Wait();
@@ -319,30 +331,45 @@ public class ReservationMenu
                 }
             case "4":
                 {
-                    var checkId = false;
+                    Console.Clear();
+                    bool checkReservationId = false;
                     int reservationId = 0;
 
-                    if (!checkId)
+
+                    while (!checkReservationId)
                     {
-                        checkId = int.TryParse(Console.ReadLine(), out int id);
-                        if (checkId)
+                        Console.WriteLine("");
+                        Console.WriteLine("Digite o ID da reserva: ");
+                        checkReservationId = int.TryParse(Console.ReadLine(), out int id);
+
+                        if (checkReservationId)
                         {
+
                             reservationId = id;
+
                         }
                     }
 
-                    if (reservationId <= 0)
+                    if (reservationId == 0)
                     {
-                        Console.WriteLine("Valor da reserva inválido");
+                        System.Console.WriteLine("Id da reserva inválido");
                         ConsolePause.Wait();
                         break;
                     }
 
-                    var canceled = _repository.RemoveReservationById(id: reservationId);
-                    if (!canceled)
+                    var reservation = _repository.GetReservationById(id: reservationId);
+                    if (reservation == null)
                     {
 
-                        Console.WriteLine("Erro ao cancelar reserva");
+                        Console.WriteLine("Reserva não encontrada");
+                        ConsolePause.Wait();
+                        break;
+                    }
+
+                    var reservationCanceled = _repository.CancelReservation(id: reservationId);
+                    if (!reservationCanceled)
+                    {
+                        Console.WriteLine("Reserva não encontrada ou não está aberta.");
                         ConsolePause.Wait();
                         break;
                     }
@@ -351,16 +378,65 @@ public class ReservationMenu
                     ConsolePause.Wait();
                     break;
                 }
+
             case "5":
                 {
-                    ConsolePause.Wait();
+                    ShowReservationList(
+                        _repository.GetClosedReservations(),
+                        "HISTÓRICO DE RESERVAS FECHADAS",
+                        "Não há reservas fechadas."
+                    );
                     break;
                 }
-
+            case "6":
+                {
+                    ShowReservationList(
+                        _repository.GetCanceledReservations(),
+                        "HISTÓRICO DE RESERVAS CANCELADAS",
+                        "Não há reservas canceladas."
+                    );
+                    break;
+                }
+            case "7":
+                break;
             default:
+                Console.WriteLine("Opção inválida.");
                 ConsolePause.Wait();
                 break;
         }
 
+    }
+
+    private void ShowReservationList(
+        List<Reservation> reservations,
+        string title,
+        string emptyMessage)
+    {
+        Console.Clear();
+        Console.WriteLine(title);
+        Console.WriteLine();
+
+        if (!reservations.Any())
+        {
+            Console.WriteLine(emptyMessage);
+            ConsolePause.Wait();
+            return;
+        }
+
+        foreach (var item in reservations)
+        {
+            Console.WriteLine($"Reserva id: {item.Id}");
+            Console.WriteLine($"Status: {item.Status}");
+            Console.WriteLine($"Data abertura: {item.OpeningDate:dd/MM/yyyy HH:mm}");
+            Console.WriteLine($"Data fechamento: {item.ClosingDate:dd/MM/yyyy HH:mm}");
+            Console.WriteLine($"Tipo suite: {item.Suite.SuiteType}");
+            Console.WriteLine($"Capacidade: {item.Suite.Capacity}");
+            Console.WriteLine($"Quantidade hospedes: {item.Guests?.Count}");
+            Console.WriteLine($"Dias reservados: {item.ReservedDays}");
+            Console.WriteLine($"Valor diária: {item.FormatedDailyValue()}");
+            Console.WriteLine("--------------------------");
+        }
+
+        ConsolePause.Wait();
     }
 }

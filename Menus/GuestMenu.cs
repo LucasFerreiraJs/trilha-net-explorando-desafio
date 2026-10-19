@@ -1,4 +1,3 @@
-using DesafioProjetoHospedagem.HotelServices;
 using DesafioProjetoHospedagem.Models;
 using DesafioProjetoHospedagem.HotelRepositories;
 using DesafioProjetoHospedagem.ConsoleHelpers;
@@ -8,7 +7,7 @@ public class GuestMenu
 {
     private readonly HotelLogRepository _logRepository;
     private readonly HotelRepository _repository;
-    public GuestMenu(HotelService service, HotelLogRepository logRepository, HotelRepository repository)
+    public GuestMenu(HotelLogRepository logRepository, HotelRepository repository)
     {
         _logRepository = logRepository;
         _repository = repository;
@@ -19,11 +18,12 @@ public class GuestMenu
 
         Console.Clear();
         Console.WriteLine("Digite uma opção:");
+        Console.WriteLine("MENU HOSPEDES");
         Console.WriteLine("");
         Console.WriteLine("1 - Cadastrar hospedes");
         Console.WriteLine("2 - Listar hospedes");
         Console.WriteLine("3 - Listar hospedes sem reserva");
-        Console.WriteLine("4 - Remover hospede");
+        Console.WriteLine("4 - Desativar hospede");
         Console.WriteLine("5 - Voltar");
         Console.WriteLine("");
 
@@ -38,6 +38,7 @@ public class GuestMenu
         {
             case "1":
                 {
+                    Console.Clear();
                     Console.WriteLine("Nome:");
                     string name = Console.ReadLine();
 
@@ -78,6 +79,7 @@ public class GuestMenu
 
             case "4":
                 {
+                    Console.Clear();
 
                     var checkId = false;
                     int guestId = 0;
@@ -96,15 +98,22 @@ public class GuestMenu
                         break;
                     }
 
-                    var remove = _repository.RemoveGuestById(id: guestId);
-                    if (!remove)
-                    {
-                        Console.WriteLine("Erro ao remover usuário");
+                    var getGuest = _repository.GetGuestById(id: guestId);
+                    if (getGuest == null){
+                        Console.WriteLine("Usuário não encontrado");
                         ConsolePause.Wait();
                         break;
                     }
 
-                    Console.WriteLine("Digite o id do hospede: ");
+                    var deactivated = _repository.DeactivateGuest(id: guestId);
+                    if (!deactivated)
+                    {
+                        Console.WriteLine("Erro ao desativar usuário");
+                        ConsolePause.Wait();
+                        break;
+                    }
+
+                    Console.WriteLine("Hóspede desativado com sucesso.");
                     ConsolePause.Wait();
                     break;
                 }

@@ -7,7 +7,9 @@ public class HotelQueries
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             TIPO_SUITE TEXT NOT NULL,
             CAPACIDADE INTEGER NOT NULL,
-            VALOR_DIARIA INTEGER NOT NULL
+            VALOR_DIARIA INTEGER NOT NULL,
+            ATIVO TEXT NOT NULL DEFAULT 'S'
+                CHECK (ATIVO IN ('S', 'N'))
         );
     ";
 
@@ -15,7 +17,9 @@ public class HotelQueries
         CREATE TABLE IF NOT EXISTS PESSOAS (
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             NOME TEXT NOT NULL,
-            SOBRENOME TEXT NULL
+            SOBRENOME TEXT NULL,
+            ATIVO TEXT NOT NULL DEFAULT 'S'
+                CHECK (ATIVO IN ('S', 'N'))
         );
     ";
 
@@ -24,8 +28,43 @@ public class HotelQueries
             ID INTEGER PRIMARY KEY AUTOINCREMENT,
             DIAS_RESERVADOS INTEGER NOT NULL,
             ID_SUITE INTEGER NOT NULL,
+            STATUS TEXT NOT NULL DEFAULT 'AB'
+                CHECK (STATUS IN ('AB', 'FE', 'CA')),
+            DATA_ABERTURA TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            DATA_FECHAMENTO TEXT NULL,
             FOREIGN KEY (ID_SUITE) REFERENCES SUITES(ID)
         );
+    ";
+
+    public string addReservationStatusColumn = @"
+        ALTER TABLE RESERVAS
+        ADD COLUMN STATUS TEXT NOT NULL DEFAULT 'AB';
+    ";
+
+    public string addReservationOpeningDateColumn = @"
+        ALTER TABLE RESERVAS
+        ADD COLUMN DATA_ABERTURA TEXT NULL;
+    ";
+
+    public string addReservationClosingDateColumn = @"
+        ALTER TABLE RESERVAS
+        ADD COLUMN DATA_FECHAMENTO TEXT NULL;
+    ";
+
+    public string fillReservationOpeningDate = @"
+        UPDATE RESERVAS
+        SET DATA_ABERTURA = CURRENT_TIMESTAMP
+        WHERE DATA_ABERTURA IS NULL;
+    ";
+
+    public string addSuiteActiveColumn = @"
+        ALTER TABLE SUITES
+        ADD COLUMN ATIVO TEXT NOT NULL DEFAULT 'S';
+    ";
+
+    public string addGuestActiveColumn = @"
+        ALTER TABLE PESSOAS
+        ADD COLUMN ATIVO TEXT NOT NULL DEFAULT 'S';
     ";
 
     public string createReservationGuestsTable = @"
@@ -39,24 +78,31 @@ public class HotelQueries
     ";
 
     public string getAllSuites = @"
-        SELECT ID, TIPO_SUITE, CAPACIDADE, VALOR_DIARIA FROM SUITES;
+        SELECT ID, TIPO_SUITE, CAPACIDADE, VALOR_DIARIA, ATIVO
+        FROM SUITES
+        WHERE ATIVO = 'S';
     ";
     public string getAllSuitesAvailable = @"
         SELECT
             S.ID,
             S.TIPO_SUITE,
             S.CAPACIDADE,
-            S.VALOR_DIARIA
+            S.VALOR_DIARIA,
+            S.ATIVO
         FROM SUITES S
-        WHERE NOT EXISTS (
+        WHERE S.ATIVO = 'S'
+          AND NOT EXISTS (
             SELECT 1 FROM RESERVAS R
             WHERE R.ID_SUITE = S.ID
+              AND R.STATUS = 'AB'
         );
     ";
 
     public string getSuiteById = @"
-        SELECT ID, TIPO_SUITE, CAPACIDADE, VALOR_DIARIA FROM SUITES
-        WHERE ID = $id;
+        SELECT ID, TIPO_SUITE, CAPACIDADE, VALOR_DIARIA, ATIVO
+        FROM SUITES
+        WHERE ID = $id
+          AND ATIVO = 'S';
     ";
 
     // SUITES
@@ -76,9 +122,11 @@ public class HotelQueries
         WHERE ID = $id;
     ";
 
-    public string deleteSuite = @"
-        DELETE FROM SUITES
-        WHERE ID = $id;
+    public string deactivateSuite = @"
+        UPDATE SUITES
+        SET ATIVO = 'N'
+        WHERE ID = $id
+          AND ATIVO = 'S';
     ";
 
 
@@ -86,25 +134,35 @@ public class HotelQueries
 
     // GUEST
     public string getAllGuests = @"
-        SELECT ID, NOME, SOBRENOME FROM PESSOAS;
+        SELECT ID, NOME, SOBRENOME, ATIVO
+        FROM PESSOAS
+        WHERE ATIVO = 'S';
     ";
 
     public string getAllGuestAvailable = @"
         SELECT
             P.ID,
             P.NOME,
-            P.SOBRENOME
+            P.SOBRENOME,
+            P.ATIVO
         FROM PESSOAS P
-        WHERE NOT EXISTS (
-            SELECT 1 FROM RESERVA_HOSPEDES RH
+        WHERE P.ATIVO = 'S'
+          AND NOT EXISTS (
+            SELECT 1
+            FROM RESERVA_HOSPEDES RH
+            JOIN RESERVAS R
+                ON R.ID = RH.ID_RESERVA
             WHERE RH.ID_PESSOA = P.ID
+              AND R.STATUS = 'AB'
         );
     ";
 
 
     public string getGuestById = @"
-        SELECT ID, NOME, SOBRENOME FROM PESSOAS
-        WHERE ID = $id;
+        SELECT ID, NOME, SOBRENOME, ATIVO
+        FROM PESSOAS
+        WHERE ID = $id
+          AND ATIVO = 'S';
     ";
     public string insertGuest = @"
         INSERT INTO PESSOAS (
@@ -119,28 +177,53 @@ public class HotelQueries
                 SOBRENOME = $lastName
         WHERE ID = $id;
     ";
-    public string deleteGuest = @"
-        DELETE FROM PESSOAS
-        WHERE ID = $id;
+    public string deactivateGuest = @"
+        UPDATE PESSOAS
+        SET ATIVO = 'N'
+        WHERE ID = $id
+          AND ATIVO = 'S';
     ";
 
     // RESERVATION
-    public string getAllReservations = @"
-        SELECT ID, DIAS_RESERVADOS, ID_SUITE FROM RESERVAS;
-    ";
-
     public string getAllReservationsWithSuite = @"
-            SELECT
+        SELECT
             R.ID,
             R.DIAS_RESERVADOS,
             R.ID_SUITE,
             S.ID,
             S.TIPO_SUITE,
             S.CAPACIDADE,
-            S.VALOR_DIARIA
-         FROM RESERVAS R
-            JOIN SUITES S
+            S.VALOR_DIARIA,
+            R.STATUS,
+            R.DATA_ABERTURA,
+            R.DATA_FECHAMENTO,
+            S.ATIVO
+        FROM RESERVAS R
+        JOIN SUITES S
             ON R.ID_SUITE = S.ID;
+    ";
+
+    public string getReservationsWithSuiteByStatus = @"
+        SELECT
+            R.ID,
+            R.DIAS_RESERVADOS,
+            R.ID_SUITE,
+            S.ID,
+            S.TIPO_SUITE,
+            S.CAPACIDADE,
+            S.VALOR_DIARIA,
+            R.STATUS,
+            R.DATA_ABERTURA,
+            R.DATA_FECHAMENTO,
+            S.ATIVO
+        FROM RESERVAS R
+        JOIN SUITES S
+            ON R.ID_SUITE = S.ID
+        WHERE R.STATUS = $status
+        ORDER BY
+            CASE WHEN R.DATA_FECHAMENTO IS NULL THEN 0 ELSE 1 END,
+            R.DATA_FECHAMENTO DESC,
+            R.DATA_ABERTURA DESC;
     ";
 
     public string getReservationById = @"
@@ -155,9 +238,13 @@ public class HotelQueries
             S.ID,
             S.TIPO_SUITE,
             S.CAPACIDADE,
-            S.VALOR_DIARIA
-         FROM RESERVAS R
-            JOIN SUITES S
+            S.VALOR_DIARIA,
+            R.STATUS,
+            R.DATA_ABERTURA,
+            R.DATA_FECHAMENTO,
+            S.ATIVO
+        FROM RESERVAS R
+        JOIN SUITES S
             ON R.ID_SUITE = S.ID
         WHERE R.ID = $id;
     ";
@@ -174,6 +261,15 @@ public class HotelQueries
                 DIAS_RESERVADOS = $reservedDays,
                 ID_SUITE = $suiteId
         WHERE ID = $id;
+    ";
+
+    public string updateReservationStatus = @"
+        UPDATE RESERVAS
+        SET
+            STATUS = $status,
+            DATA_FECHAMENTO = CURRENT_TIMESTAMP
+        WHERE ID = $id
+          AND STATUS = 'AB';
     ";
     public string deleteReservation = @"
         DELETE FROM  RESERVAS
@@ -244,7 +340,8 @@ public class HotelQueries
             P.SOBRENOME,
             R.ID,
             R.DIAS_RESERVADOS,
-            R.ID_SUITE
+            R.ID_SUITE,
+            P.ATIVO
         FROM RESERVA_HOSPEDES RH
         JOIN PESSOAS P
             ON P.ID = RH.ID_PESSOA
@@ -266,6 +363,10 @@ public class HotelQueries
     public string deleteReservationGuests = @"
         DELETE FROM RESERVA_HOSPEDES
         WHERE ID = $id;
+    ";
+    public string deleteReservationGuestsByReservationId = @"
+        DELETE FROM RESERVA_HOSPEDES
+        WHERE ID_RESERVA = $reservaId;
     ";
 
 

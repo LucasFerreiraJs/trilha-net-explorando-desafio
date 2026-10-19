@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using DesafioProjetoHospedagem.HotelServices;
 using DesafioProjetoHospedagem.Models;
 using Microsoft.Data.Sqlite;
 using DesafioProjetoHospedagem.Queries;
@@ -38,6 +37,48 @@ foreach (string sql in scripts)
     command.ExecuteNonQuery();
 }
 
+void ExecuteIfColumnIsMissing(
+    string tableName,
+    string columnName,
+    string migrationSql)
+{
+    using var checkColumnCommand = conn.CreateCommand();
+    checkColumnCommand.CommandText = $"PRAGMA table_info({tableName});";
+
+    using var reader = checkColumnCommand.ExecuteReader();
+    bool columnExists = false;
+
+    while (reader.Read())
+    {
+        if (reader.GetString(1).Equals(columnName, StringComparison.OrdinalIgnoreCase))
+        {
+            columnExists = true;
+            break;
+        }
+    }
+
+    reader.Close();
+
+    if (!columnExists)
+    {
+        using var migrationCommand = conn.CreateCommand();
+        migrationCommand.CommandText = migrationSql;
+        migrationCommand.ExecuteNonQuery();
+    }
+}
+
+ExecuteIfColumnIsMissing("RESERVAS", "STATUS", hotelQueries.addReservationStatusColumn);
+ExecuteIfColumnIsMissing("RESERVAS", "DATA_ABERTURA", hotelQueries.addReservationOpeningDateColumn);
+ExecuteIfColumnIsMissing("RESERVAS", "DATA_FECHAMENTO", hotelQueries.addReservationClosingDateColumn);
+ExecuteIfColumnIsMissing("SUITES", "ATIVO", hotelQueries.addSuiteActiveColumn);
+ExecuteIfColumnIsMissing("PESSOAS", "ATIVO", hotelQueries.addGuestActiveColumn);
+
+using (var fillOpeningDateCommand = conn.CreateCommand())
+{
+    fillOpeningDateCommand.CommandText = hotelQueries.fillReservationOpeningDate;
+    fillOpeningDateCommand.ExecuteNonQuery();
+}
+
 string filepath = "Hotel_log.txt";
 
 HotelLogRepository logRepository = new HotelLogRepository(path: filepath);
@@ -45,24 +86,18 @@ logRepository.StartFile();
 
 HotelRepository repository = new HotelRepository(connection: conn, queries: hotelQueries, log: logRepository);
 
-HotelService service = new HotelService(repository: repository);
-
-
 // menus
 var guestMenu = new GuestMenu(
-    service: service,
     logRepository: logRepository,
     repository: repository
 );
 
 var reservationMenu = new ReservationMenu(
-    service: service,
     logRepository: logRepository,
     repository: repository
 );
 
 var suiteMenu = new SuiteMenu(
-    service: service,
     logRepository: logRepository,
     repository: repository
 );

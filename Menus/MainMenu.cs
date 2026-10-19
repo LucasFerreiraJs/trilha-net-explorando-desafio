@@ -31,6 +31,7 @@ public class MainMenu
     public void ShowOptions()
     {
         Console.Clear();
+        Console.WriteLine("MENU PRINCIPAL");
         Console.WriteLine("Digite uma opção:");
         Console.WriteLine("");
         Console.WriteLine("1 - Menu suite");
