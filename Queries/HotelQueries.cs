@@ -36,37 +36,6 @@ public class HotelQueries
         );
     ";
 
-    public string addReservationStatusColumn = @"
-        ALTER TABLE RESERVAS
-        ADD COLUMN STATUS TEXT NOT NULL DEFAULT 'AB';
-    ";
-
-    public string addReservationOpeningDateColumn = @"
-        ALTER TABLE RESERVAS
-        ADD COLUMN DATA_ABERTURA TEXT NULL;
-    ";
-
-    public string addReservationClosingDateColumn = @"
-        ALTER TABLE RESERVAS
-        ADD COLUMN DATA_FECHAMENTO TEXT NULL;
-    ";
-
-    public string fillReservationOpeningDate = @"
-        UPDATE RESERVAS
-        SET DATA_ABERTURA = CURRENT_TIMESTAMP
-        WHERE DATA_ABERTURA IS NULL;
-    ";
-
-    public string addSuiteActiveColumn = @"
-        ALTER TABLE SUITES
-        ADD COLUMN ATIVO TEXT NOT NULL DEFAULT 'S';
-    ";
-
-    public string addGuestActiveColumn = @"
-        ALTER TABLE PESSOAS
-        ADD COLUMN ATIVO TEXT NOT NULL DEFAULT 'S';
-    ";
-
     public string createReservationGuestsTable = @"
         CREATE TABLE IF NOT EXISTS RESERVA_HOSPEDES(
             ID INTEGER PRIMARY KEY AUTOINCREMENT,

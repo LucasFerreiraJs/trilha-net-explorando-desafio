@@ -37,48 +37,6 @@ foreach (string sql in scripts)
     command.ExecuteNonQuery();
 }
 
-void ExecuteIfColumnIsMissing(
-    string tableName,
-    string columnName,
-    string migrationSql)
-{
-    using var checkColumnCommand = conn.CreateCommand();
-    checkColumnCommand.CommandText = $"PRAGMA table_info({tableName});";
-
-    using var reader = checkColumnCommand.ExecuteReader();
-    bool columnExists = false;
-
-    while (reader.Read())
-    {
-        if (reader.GetString(1).Equals(columnName, StringComparison.OrdinalIgnoreCase))
-        {
-            columnExists = true;
-            break;
-        }
-    }
-
-    reader.Close();
-
-    if (!columnExists)
-    {
-        using var migrationCommand = conn.CreateCommand();
-        migrationCommand.CommandText = migrationSql;
-        migrationCommand.ExecuteNonQuery();
-    }
-}
-
-ExecuteIfColumnIsMissing("RESERVAS", "STATUS", hotelQueries.addReservationStatusColumn);
-ExecuteIfColumnIsMissing("RESERVAS", "DATA_ABERTURA", hotelQueries.addReservationOpeningDateColumn);
-ExecuteIfColumnIsMissing("RESERVAS", "DATA_FECHAMENTO", hotelQueries.addReservationClosingDateColumn);
-ExecuteIfColumnIsMissing("SUITES", "ATIVO", hotelQueries.addSuiteActiveColumn);
-ExecuteIfColumnIsMissing("PESSOAS", "ATIVO", hotelQueries.addGuestActiveColumn);
-
-using (var fillOpeningDateCommand = conn.CreateCommand())
-{
-    fillOpeningDateCommand.CommandText = hotelQueries.fillReservationOpeningDate;
-    fillOpeningDateCommand.ExecuteNonQuery();
-}
-
 string filepath = "Hotel_log.txt";
 
 HotelLogRepository logRepository = new HotelLogRepository(path: filepath);
